@@ -2,13 +2,14 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import FishermanHome from '../../../screens/Fisherman/FishermanHome';
-import AddLotScreen from '../../../screens/Fisherman/AddLotScreen';
+// import AddLotScreen from '../../../screens/Fisherman/AddLotScreen';
 import AddTripScreen from '../../../screens/Fisherman/AddTrip';
+import AddLotScreen from '../../../screens/Fisherman/AddLot';
 
 export type FishermanStackParamList = {
   FishermanHome: undefined;
   Trip: undefined;
-  Lots: { tripId: string };
+  Lots: { tripId?: string } | undefined; // 👈 optional + allow undefined
 };
 
 const Stack = createNativeStackNavigator<FishermanStackParamList>();

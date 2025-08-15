@@ -148,7 +148,7 @@ const FishermanHome = () => {
           <ActionCard
             label="Lots"
             iconSource={require('../../assets/images/fishIcon.png')}
-            onPress={() => navigation.navigate('Trip')}
+            onPress={() => navigation.navigate('Lots')}
           />
         </View>
       </View>
