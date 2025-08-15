@@ -1,0 +1,42 @@
+// src/navigation/RootNavigator.tsx
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
+
+import AuthStack from './stacks/AuthStack';
+import FishermanStack from './stacks/FishermanStack';
+import MiddleManStack from './stacks/MiddleManStack';
+import ExporterStack from './stacks/ExporterStack';
+import MFDStaffStack from './stacks/MFDStaffStack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import NotSupportedScreen from '../../screens/common/NotSupportedScreen';
+import { RootState } from '../../redux/store';
+
+const Stack = createNativeStackNavigator();
+
+export default function RootNavigator() {
+  const { isAuthenticated, user } = useSelector((s: RootState) => s.auth);
+
+  if (!isAuthenticated || !user) {
+    return (
+      <NavigationContainer>
+        <AuthStack />
+      </NavigationContainer>
+    );
+  }
+
+  const role = user.role;
+  return (
+    <NavigationContainer>
+      {role === 'fisherman' && <FishermanStack />}
+      {role === 'middle_man' && <MiddleManStack />}
+      {role === 'exporter' && <ExporterStack />}
+      {role === 'mfd_staff' && <MFDStaffStack />}
+      {!(role === 'fisherman' || role === 'middle_man' || role === 'exporter' || role === 'mfd_staff') && (
+        <Stack.Navigator>
+          <Stack.Screen name="NotSupported" component={NotSupportedScreen} options={{ headerShown: false }} />
+        </Stack.Navigator>
+      )}
+    </NavigationContainer>
+  );
+}

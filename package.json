@@ -31,6 +31,8 @@
     "react-native-screens": "^4.13.1",
     "react-native-search-bar": "^3.5.1",
     "react-native-vector-icons": "^10.3.0",
+    "react-redux": "^9.2.0",
+    "redux": "^5.0.1",
     "ulid": "^3.0.1"
   },
   "devDependencies": {

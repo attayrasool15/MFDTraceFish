@@ -1,4 +1,5 @@
-import React from 'react';
+// src/screens/fisherman/FishermanHome.tsx
+import React, { useCallback, useLayoutEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,13 +7,46 @@ import {
   Text,
   Image,
   ImageBackground,
+  Alert,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import { logout } from '../../redux/actions/authActions';
 
 const FishermanHome = () => {
+  const dispatch = useDispatch();
+  const navigation = useNavigation();
+
+  const handleLogout = useCallback(() => {
+    Alert.alert('Logout', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Yes, Logout',
+        style: 'destructive',
+        onPress: () => dispatch(logout()),
+      },
+    ]);
+  }, [dispatch]);
+
+  // Put a Logout button in the header as well
+  useLayoutEffect(() => {
+    navigation.setOptions?.({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+        >
+          <Text style={{ color: '#1B5E20', fontWeight: '700' }}>Logout</Text>
+        </TouchableOpacity>
+      ),
+      title: 'Fisherman',
+    });
+  }, [navigation, handleLogout]);
+
   return (
     <View style={styles.container}>
       <ImageBackground
-        source={require('./../assets/images/fishermanImage.png')}
+        source={require('../../assets/images/fishermanImage.png')}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
@@ -25,7 +59,7 @@ const FishermanHome = () => {
         {/* Profile button */}
         <TouchableOpacity style={styles.profileButton}>
           <Image
-            source={require('./../assets/images/placeholderIMG.png')}
+            source={require('../../assets/images/placeholderIMG.png')}
             style={styles.profileImage}
           />
           <Text style={styles.profileText}>Profile</Text>
@@ -35,7 +69,7 @@ const FishermanHome = () => {
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.actionCard}>
             <Image
-              source={require('./../assets/images/boatIcon.png')}
+              source={require('../../assets/images/boatIcon.png')}
               style={styles.icon}
             />
             <Text style={styles.buttonText}>Trips</Text>
@@ -43,7 +77,7 @@ const FishermanHome = () => {
 
           <TouchableOpacity style={styles.actionCard}>
             <Image
-              source={require('./../assets/images/fishIcon.png')}
+              source={require('../../assets/images/fishIcon.png')}
               style={styles.icon}
             />
             <Text style={styles.buttonText}>Lots</Text>
@@ -54,12 +88,8 @@ const FishermanHome = () => {
   );
 };
 
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff', // fallback
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
   backgroundImage: {
     flex: 1,
     justifyContent: 'flex-start',
@@ -68,12 +98,12 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(17, 17, 17, 0.15)', // soft green tint
+    backgroundColor: 'rgba(17, 17, 17, 0.15)',
   },
   welcome: {
     fontWeight: 'bold',
     fontSize: 36,
-    color: "#1B5E20",
+    color: '#1B5E20',
     textAlign: 'center',
     marginBottom: 30,
     textShadowColor: 'rgba(255,255,255,0.6)',
@@ -84,7 +114,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: 'rgba(255,255,255,0.75)', // glassy white
+    backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: 30,
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -95,25 +125,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-  profileImage: {
-    height: 50,
-    width: 50,
-    borderRadius: 25,
-    marginRight: 10,
-  },
-  profileText: {
-    fontSize: 18,
-    color: "#1B5E20",
-    fontWeight: '600',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 20,
-  },
+  profileImage: { height: 50, width: 50, borderRadius: 25, marginRight: 10 },
+  profileText: { fontSize: 18, color: '#1B5E20', fontWeight: '600' },
+  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 20 },
   actionCard: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.75)', // glassy look
+    backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: 20,
     paddingVertical: 30,
     alignItems: 'center',
@@ -123,16 +140,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-  icon: {
-    width: 40,
-    height: 40,
-    marginBottom: 10,
-  },
-  buttonText: {
-    fontSize: 20,
-    color: "#1B5E20",
-    fontWeight: '700',
-  },
+  icon: { width: 40, height: 40, marginBottom: 10 },
+  buttonText: { fontSize: 20, color: '#1B5E20', fontWeight: '700' },
 });
 
 export default FishermanHome;
