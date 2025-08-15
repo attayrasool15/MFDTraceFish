@@ -1,10 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Platform,
+} from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { check, PERMISSIONS, request, RESULTS } from 'react-native-permissions';
 import Geolocation, { GeoPosition } from 'react-native-geolocation-service';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Dropdown } from 'react-native-element-dropdown';
+import { buildTripId } from '../../utils/ids';
+import { useDispatch } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import { FishermanStackParamList } from '../../app/navigation/stacks/FishermanStack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { createTripLocal } from '../../redux/actions/tripActions';
+
+type Nav = NativeStackNavigationProp<FishermanStackParamList, 'Trip'>; // ▶
+
 
 // ---- Types ----
 interface FormValues {
@@ -47,10 +64,23 @@ async function getCurrentPosition(): Promise<GeoPosition> {
 }
 
 export default function AddTripScreen() {
-  const [gps, setGps] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
+   const dispatch = useDispatch();                     // ▶
+  const navigation = useNavigation<Nav>();  
+  const [tripId] = useState(buildTripId()); // ▶ auto ID now
+
+  const [gps, setGps] = useState<{
+    lat: number;
+    lng: number;
+    accuracy?: number;
+  } | null>(null);
   const [locLoading, setLocLoading] = useState(false);
 
-  const { control, handleSubmit, formState: { errors }, watch } = useForm<FormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    watch,
+  } = useForm<FormValues>({
     defaultValues: {
       captainName: '',
       boatNameId: '',
@@ -83,29 +113,36 @@ export default function AddTripScreen() {
       try {
         const ok = await ensureLocationPermission();
         if (!ok) {
-          Alert.alert('Location needed', 'Please allow location to attach coordinates to the trip.');
+          Alert.alert(
+            'Location needed',
+            'Please allow location to attach coordinates to the trip.',
+          );
           setLocLoading(false);
           return;
         }
         const pos = await getCurrentPosition();
-        setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+        setGps({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        });
       } catch (e: any) {
         console.warn('GPS error', e?.message || e);
-        Alert.alert('Location error', 'Could not get GPS location. You can try again.');
+        Alert.alert(
+          'Location error',
+          'Could not get GPS location. You can try again.',
+        );
       } finally {
         setLocLoading(false);
       }
     })();
   }, []);
 
-  const onSubmit = (values: FormValues) => {
-    if (!gps) {
-      Alert.alert('Location required', 'Please capture location before saving.');
-      return;
-    }
+const onSubmit = (values: FormValues) => {
+    if (!gps) { Alert.alert('Location required', 'Please capture location before saving.'); return; }
 
     const tripDraft = {
-      id: Date.now().toString(),
+      tripId,                                                    // ▶ use readable ID
       captainName: values.captainName.trim(),
       boatNameId: values.boatNameId.trim(),
       tripPurpose: values.tripPurpose.trim(),
@@ -118,11 +155,15 @@ export default function AddTripScreen() {
       targetSpecies: values.targetSpecies.trim(),
       tripCost: Number(values.tripCost),
       gps,
-      capturedAt: new Date().toISOString(),
+      departureAt: new Date().toISOString(),                     // ▶ record departure
+      arrivalAt: null,                                           // ▶ will be set when trip ends
       _dirty: true,
     };
 
-    Alert.alert('Saved', 'Trip saved offline and will sync when online.', [
+    dispatch(createTripLocal(tripDraft));                        // ▶ save offline in Redux
+
+    Alert.alert('Saved', `Trip ${tripId} saved offline.`, [
+      { text: 'Add Lots', onPress: () => navigation.navigate('Lots', { tripId }) }, // ▶ go add lots
       { text: 'OK' },
     ]);
   };
@@ -131,9 +172,16 @@ export default function AddTripScreen() {
     setLocLoading(true);
     try {
       const ok = await ensureLocationPermission();
-      if (!ok) { setLocLoading(false); return; }
+      if (!ok) {
+        setLocLoading(false);
+        return;
+      }
       const pos = await getCurrentPosition();
-      setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+      setGps({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+      });
     } catch (e: any) {
       Alert.alert('Location error', 'Could not refresh GPS location.');
     } finally {
@@ -150,13 +198,17 @@ export default function AddTripScreen() {
     'Jiwani',
     'Keti Bandar',
     'Korangi Creek',
-    'Fisherman`s Wharf'
+    'Fisherman`s Wharf',
   ];
   const seaTypes = ['Nearshore', 'Offshore', 'Deep Sea'];
   const seaConditionOptions = ['Calm', 'Moderate', 'Rough', 'Stormy'];
 
   // Updated dropdown renderer using react-native-element-dropdown
-  const renderDropdown = (label: string, name: keyof FormValues, options: string[]) => {
+  const renderDropdown = (
+    label: string,
+    name: keyof FormValues,
+    options: string[],
+  ) => {
     const dropdownData = options.map(opt => ({ label: opt, value: opt }));
 
     return (
@@ -192,6 +244,10 @@ export default function AddTripScreen() {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.header}>Add Trip</Text>
+      <View style={styles.readonlyRow}>
+        <Text style={styles.label}>Trip ID</Text>
+        <Text style={{ fontWeight: '600' }}>{tripId}</Text>
+      </View>
 
       <View style={styles.field}>
         <Text style={styles.label}>Captain Name</Text>
@@ -210,7 +266,9 @@ export default function AddTripScreen() {
             />
           )}
         />
-        {errors.captainName && <Text style={styles.errorText}>{errors.captainName.message}</Text>}
+        {errors.captainName && (
+          <Text style={styles.errorText}>{errors.captainName.message}</Text>
+        )}
       </View>
 
       <View style={styles.field}>
@@ -230,7 +288,9 @@ export default function AddTripScreen() {
             />
           )}
         />
-        {errors.boatNameId && <Text style={styles.errorText}>{errors.boatNameId.message}</Text>}
+        {errors.boatNameId && (
+          <Text style={styles.errorText}>{errors.boatNameId.message}</Text>
+        )}
       </View>
 
       <View style={styles.field}>
@@ -250,7 +310,9 @@ export default function AddTripScreen() {
             />
           )}
         />
-        {errors.tripPurpose && <Text style={styles.errorText}>{errors.tripPurpose.message}</Text>}
+        {errors.tripPurpose && (
+          <Text style={styles.errorText}>{errors.tripPurpose.message}</Text>
+        )}
       </View>
 
       {renderDropdown('Port', 'port', ports)}
@@ -275,7 +337,9 @@ export default function AddTripScreen() {
             />
           )}
         />
-        {errors.numCrew && <Text style={styles.errorText}>{errors.numCrew.message}</Text>}
+        {errors.numCrew && (
+          <Text style={styles.errorText}>{errors.numCrew.message}</Text>
+        )}
       </View>
 
       <View style={styles.field}>
@@ -296,7 +360,9 @@ export default function AddTripScreen() {
             />
           )}
         />
-        {errors.numLifejackets && <Text style={styles.errorText}>{errors.numLifejackets.message}</Text>}
+        {errors.numLifejackets && (
+          <Text style={styles.errorText}>{errors.numLifejackets.message}</Text>
+        )}
       </View>
 
       <View style={styles.field}>
@@ -307,7 +373,10 @@ export default function AddTripScreen() {
           rules={{ required: 'Emergency contact is required' }}
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
-              style={[styles.input, errors.emergencyContact && styles.inputError]}
+              style={[
+                styles.input,
+                errors.emergencyContact && styles.inputError,
+              ]}
               placeholder="Contact Number"
               keyboardType="phone-pad"
               onBlur={onBlur}
@@ -317,7 +386,11 @@ export default function AddTripScreen() {
             />
           )}
         />
-        {errors.emergencyContact && <Text style={styles.errorText}>{errors.emergencyContact.message}</Text>}
+        {errors.emergencyContact && (
+          <Text style={styles.errorText}>
+            {errors.emergencyContact.message}
+          </Text>
+        )}
       </View>
 
       <View style={styles.field}>
@@ -337,7 +410,9 @@ export default function AddTripScreen() {
             />
           )}
         />
-        {errors.targetSpecies && <Text style={styles.errorText}>{errors.targetSpecies.message}</Text>}
+        {errors.targetSpecies && (
+          <Text style={styles.errorText}>{errors.targetSpecies.message}</Text>
+        )}
       </View>
 
       <View style={styles.field}>
@@ -358,23 +433,37 @@ export default function AddTripScreen() {
             />
           )}
         />
-        {errors.tripCost && <Text style={styles.errorText}>{errors.tripCost.message}</Text>}
+        {errors.tripCost && (
+          <Text style={styles.errorText}>{errors.tripCost.message}</Text>
+        )}
       </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Starting Location</Text>
         {gps ? (
-          <Text style={styles.cardText}>Lat {gps.lat.toFixed(5)}, Lng {gps.lng.toFixed(5)}{gps.accuracy ? ` (±${Math.round(gps.accuracy)}m)` : ''}</Text>
+          <Text style={styles.cardText}>
+            Lat {gps.lat.toFixed(5)}, Lng {gps.lng.toFixed(5)}
+            {gps.accuracy ? ` (±${Math.round(gps.accuracy)}m)` : ''}
+          </Text>
         ) : (
           <Text style={styles.cardText}>No location yet</Text>
         )}
-        <TouchableOpacity style={[styles.buttonSecondary, locLoading && styles.buttonDisabled]} onPress={recaptureLocation} disabled={locLoading}>
-          <Text style={styles.buttonSecondaryText}>{locLoading ? 'Getting location…' : 'Capture/Refresh Location'}</Text>
+        <TouchableOpacity
+          style={[styles.buttonSecondary, locLoading && styles.buttonDisabled]}
+          onPress={recaptureLocation}
+          disabled={locLoading}
+        >
+          <Text style={styles.buttonSecondaryText}>
+            {locLoading ? 'Getting location…' : 'Capture/Refresh Location'}
+          </Text>
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity
-        style={[styles.button, (!gps || !numbersValid) && styles.buttonDisabled]}
+        style={[
+          styles.button,
+          (!gps || !numbersValid) && styles.buttonDisabled,
+        ]}
         onPress={handleSubmit(onSubmit)}
         disabled={!gps || !numbersValid}
       >
@@ -386,19 +475,66 @@ export default function AddTripScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  header: { fontSize: 22, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
+  header: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
   field: { marginTop: 10 },
   label: { fontSize: 16, marginBottom: 6, color: '#222' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, paddingHorizontal: 12, height: 48, fontSize: 16 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 48,
+    fontSize: 16,
+  },
   inputError: { borderColor: '#d00' },
   errorText: { color: '#d00', marginTop: 6, fontSize: 12 },
-  card: { borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 12, marginTop: 14, backgroundColor: '#fafafa' },
+  card: {
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 14,
+    backgroundColor: '#fafafa',
+  },
   cardTitle: { fontSize: 16, fontWeight: '600', marginBottom: 6 },
   cardText: { fontSize: 14, color: '#333', marginBottom: 8 },
-  button: { backgroundColor: '#0A84FF', height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 18, marginBottom: 35 },
+  button: {
+    backgroundColor: '#0A84FF',
+    height: 52,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
+    marginBottom: 35,
+  },
   buttonText: { color: '#fff', fontSize: 17, fontWeight: '700' },
-  buttonSecondary: { backgroundColor: '#EAF3FF', paddingHorizontal: 14, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  buttonSecondary: {
+    backgroundColor: '#EAF3FF',
+    paddingHorizontal: 14,
+    height: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
   buttonSecondaryText: { color: '#0A84FF', fontSize: 14, fontWeight: '600' },
   buttonDisabled: { opacity: 0.6 },
-  dropdown: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, paddingHorizontal: 12, height: 48, justifyContent: 'center' },
+  dropdown: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 48,
+    justifyContent: 'center',
+  },
+  readonlyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
 });

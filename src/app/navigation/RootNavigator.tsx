@@ -11,6 +11,7 @@ import MFDStaffStack from './stacks/MFDStaffStack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import NotSupportedScreen from '../../screens/common/NotSupportedScreen';
 import { RootState } from '../../redux/store';
+import WebViewScreen from '../../screens/WebViewScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,11 +33,27 @@ export default function RootNavigator() {
       {role === 'middle_man' && <MiddleManStack />}
       {role === 'exporter' && <ExporterStack />}
       {role === 'mfd_staff' && <MFDStaffStack />}
-      {!(role === 'fisherman' || role === 'middle_man' || role === 'exporter' || role === 'mfd_staff') && (
+      {!(
+        role === 'fisherman' ||
+        role === 'middle_man' ||
+        role === 'exporter' ||
+        role === 'mfd_staff'
+      ) && (
         <Stack.Navigator>
-          <Stack.Screen name="NotSupported" component={NotSupportedScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="NotSupported"
+            component={NotSupportedScreen}
+            options={{ headerShown: false }}
+          />
         </Stack.Navigator>
       )}
+      {/* <Stack.Navigator>
+      <Stack.Screen
+        name="WebView"
+        component={WebViewScreen}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator> */}
     </NavigationContainer>
   );
 }
