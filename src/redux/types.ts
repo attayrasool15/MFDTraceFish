@@ -1,12 +1,18 @@
 // src/redux/types.ts
-import type { UserRole } from '../constants/dummyUsers';
+export type AppRole = 'fisherman' | 'middle_man' | 'exporter' | 'mfd_staff' | 'super_admin';
 
-export interface AuthState {
-  loading: boolean;
-  isAuthenticated: boolean;
-  user: null | { email: string; name: string; role: UserRole };
-  error: string | null;
+export interface AuthUser {
+  name: string;
+  email: string;
+  role: AppRole;
+  token: string;
 }
+
+export type AuthState = {
+  user: AuthUser | null;
+  loading: boolean;
+  error: string | null;
+};
 
 export const LOGIN_REQUEST = 'LOGIN_REQUEST' as const;
 export const LOGIN_SUCCESS = 'LOGIN_SUCCESS' as const;
@@ -15,6 +21,6 @@ export const LOGOUT = 'LOGOUT' as const;
 
 export type AuthAction =
   | { type: typeof LOGIN_REQUEST }
-  | { type: typeof LOGIN_SUCCESS; payload: { email: string; name: string; role: UserRole } }
-  | { type: typeof LOGIN_FAILURE; payload: string }
+  | { type: typeof LOGIN_SUCCESS; payload: AuthUser }
+  | { type: typeof LOGIN_FAILURE; payload: string | null }
   | { type: typeof LOGOUT };
