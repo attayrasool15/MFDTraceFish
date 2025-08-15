@@ -1,7 +1,7 @@
 // src/navigation/RootNavigator.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import AuthStack from './stacks/AuthStack';
 import FishermanStack from './stacks/FishermanStack';
@@ -11,11 +11,14 @@ import MFDStaffStack from './stacks/MFDStaffStack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import NotSupportedScreen from '../../screens/common/NotSupportedScreen';
 import { RootState } from '../../redux/store';
-import WebViewScreen from '../../screens/WebViewScreen';
+import { loadSession } from '../../redux/actions/authActions';
+// import WebViewScreen from '../../screens/WebViewScreen';
 
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
+  const dispatch = useDispatch();
+  useEffect(() => { dispatch<any>(loadSession()); }, [dispatch]);
   const { isAuthenticated, user } = useSelector((s: RootState) => s.auth);
 
   if (!isAuthenticated || !user) {

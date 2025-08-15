@@ -20,14 +20,14 @@ import {
 } from 'react-native-image-picker';
 import { ulid } from 'ulid';
 import { ScrollView } from 'react-native-gesture-handler';
-import { useDispatch } from 'react-redux';                         // ▶
-import { createLotLocal } from '../../redux/actions/lotActions';   // ▶ adjust path
-import { buildLotNo } from '../../utils/ids';                      // ▶
-import { useRoute } from '@react-navigation/native';               // ▶
+import { useDispatch } from 'react-redux'; // ▶
+import { buildLotNo } from '../../utils/ids'; // ▶
+import { useRoute } from '@react-navigation/native'; // ▶
 import type { RouteProp } from '@react-navigation/native';
 import { FishermanStackParamList } from '../../app/navigation/stacks/FishermanStack';
+import { createLot } from '../../redux/actions/lotApiActions';
 
-type LotsRoute = RouteProp<FishermanStackParamList, 'Lots'>;       // ▶
+type LotsRoute = RouteProp<FishermanStackParamList, 'Lots'>; // ▶
 
 // ---- Types ----
 interface FormValues {
@@ -63,11 +63,11 @@ async function getCurrentPosition(): Promise<GeoPosition> {
 
 //{ route, navigation }: Props
 export default function AddLotScreen() {
-   const dispatch = useDispatch();                                  // ▶
-  const route = useRoute<LotsRoute>();                             // ▶
-  const { tripId } = route.params;                                 // ▶
-  const [lotNo] = useState(buildLotNo());   
- 
+  const dispatch = useDispatch(); // ▶
+  const route = useRoute<LotsRoute>(); // ▶
+  const { tripId } = route.params; // ▶
+  const [lotNo] = useState(buildLotNo());
+
   const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
   const [gps, setGps] = useState<{
     lat: number;
@@ -146,11 +146,17 @@ export default function AddLotScreen() {
   };
 
   const onSubmit = (values: FormValues) => {
-    if (!gps) { Alert.alert('Location required', 'Please capture location before saving.'); return; }
+    if (!gps) {
+      Alert.alert(
+        'Location required',
+        'Please capture location before saving.',
+      );
+      return;
+    }
 
     const lotDraft = {
-      lotNo,                               // ▶ human-friendly lot number
-      tripId,                              // ▶ link to trip
+      lotNo, // ▶ human-friendly lot number
+      tripId, // ▶ link to trip
       species: values.species.trim(),
       grade: values.grade.trim(),
       weightKg: Number(values.weightKg),
@@ -160,7 +166,7 @@ export default function AddLotScreen() {
       _dirty: true,
     };
 
-    dispatch(createLotLocal(lotDraft));    // ▶ save offline
+    dispatch<any>(createLot(lotDraft));
 
     Alert.alert('Saved', `Lot ${lotNo} saved offline.`, [{ text: 'OK' }]);
   };

@@ -29,7 +29,7 @@ export const s = StyleSheet.create({
     borderBottomRightRadius: 18,
     shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4,
   },
-  heroTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
+  heroTitle: { color: '#fff', fontSize: 22, fontWeight: '800',marginLeft:50 },
   chipRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   chip: {
     backgroundColor: '#fff', paddingVertical: 8, paddingHorizontal: 12,

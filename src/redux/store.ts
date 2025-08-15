@@ -1,9 +1,10 @@
 // src/redux/store.ts
-import { createStore, combineReducers } from 'redux';
+import { createStore, combineReducers, applyMiddleware, compose } from 'redux';
+import { thunk as thunkMiddleware } from 'redux-thunk'; // <-- use named export
+
 import { authReducer } from './reducers/authReducer';
 import { tripsReducer } from './reducers/tripReducer';
 import { lotsReducer } from './reducers/lotReducer';
-
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -12,4 +13,9 @@ const rootReducer = combineReducers({
 });
 
 export type RootState = ReturnType<typeof rootReducer>;
-export const store = createStore(rootReducer);
+
+// If you don't care about DevTools for now, keep it super simple:
+const enhancer = applyMiddleware(thunkMiddleware);
+const composeEnhancers =
+  ((global as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ as typeof compose) || compose;
+export const store = createStore(rootReducer, composeEnhancers(enhancer));
