@@ -19,7 +19,7 @@ import {
 } from 'react-native-image-picker';
 import RadioGroup from 'react-native-radio-buttons-group';
 import { useNavigation } from '@react-navigation/native';
-import { RootStackParamList } from '../types';
+import { RootStackParamList } from '../../../types';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 const SignUp = () => {
@@ -153,7 +153,7 @@ const SignUp = () => {
         keyboardShouldPersistTaps="handled"
       >
         <Image
-          source={require('./assets/images/EmblemGOP.png')}
+          source={require('../../assets/images/EmblemGOP.png')}
           style={styles.image}
         />
 
@@ -170,7 +170,7 @@ const SignUp = () => {
                 source={
                   imageUri
                     ? { uri: imageUri }
-                    : require('./assets/images/placeholderIMG.png')
+                    : require('../../assets/images/placeholderIMG.png')
                 }
               />
               <Text style={styles.imgText}>Upload Profile Photo</Text>

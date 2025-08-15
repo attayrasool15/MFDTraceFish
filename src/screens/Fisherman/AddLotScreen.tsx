@@ -1,40 +1,40 @@
-// =============================================
-// File: src/screens/Fisherman/AddLotScreen.tsx
-// Simple, big-button form for fishermen to add a Lot
-// Requirements: react-hook-form, ulid, react-native-permissions,
-// react-native-geolocation-service, react-native-image-picker
-// =============================================
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Image,
+  Platform,
+} from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 //import { FishermanStackParamList } from '../../app/navigation/stacks/FishermanStack';
 import { check, PERMISSIONS, request, RESULTS } from 'react-native-permissions';
 import Geolocation, { GeoPosition } from 'react-native-geolocation-service';
-import { launchCamera, launchImageLibrary, ImagePickerResponse } from 'react-native-image-picker';
+import {
+  launchCamera,
+  launchImageLibrary,
+  ImagePickerResponse,
+} from 'react-native-image-picker';
 import { ulid } from 'ulid';
 import { ScrollView } from 'react-native-gesture-handler';
+import { useDispatch } from 'react-redux';                         // ▶
+import { createLotLocal } from '../../redux/actions/lotActions';   // ▶ adjust path
+import { buildLotNo } from '../../utils/ids';                      // ▶
+import { useRoute } from '@react-navigation/native';               // ▶
+import type { RouteProp } from '@react-navigation/native';
+import { FishermanStackParamList } from '../../app/navigation/stacks/FishermanStack';
+
+type LotsRoute = RouteProp<FishermanStackParamList, 'Lots'>;       // ▶
 
 // ---- Types ----
 interface FormValues {
   species: string;
-  weightKg: string; // keep as string for input; convert to number on submit
-  grade: string; 
+  weightKg: string;
+  grade: string;
 }
-
-//type Props = NativeStackScreenProps<FishermanStackParamList, 'AddLot'>;
-
-// ---- Helpers ----
-// function buildLotNo(now = new Date()) {
-//   // LOT-YYYYMMDD-HHMM-xxxxx
-//   const y = now.getFullYear();
-//   const m = String(now.getMonth() + 1).padStart(2, '0');
-//   const d = String(now.getDate()).padStart(2, '0');
-//   const hh = String(now.getHours()).padStart(2, '0');
-//   const mm = String(now.getMinutes()).padStart(2, '0');
-//   const suffix = ulid().slice(-5).toUpperCase();
-//   return `LOT-${y}${m}${d}-${hh}${mm}-${suffix}`;
-// }
 
 async function ensureLocationPermission(): Promise<boolean> {
   const perm = Platform.select({
@@ -63,13 +63,25 @@ async function getCurrentPosition(): Promise<GeoPosition> {
 
 //{ route, navigation }: Props
 export default function AddLotScreen() {
-  //const { tripId } = route.params;
-  //const [lotNo] = useState(buildLotNo());
+   const dispatch = useDispatch();                                  // ▶
+  const route = useRoute<LotsRoute>();                             // ▶
+  const { tripId } = route.params;                                 // ▶
+  const [lotNo] = useState(buildLotNo());   
+ 
   const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
-  const [gps, setGps] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
+  const [gps, setGps] = useState<{
+    lat: number;
+    lng: number;
+    accuracy?: number;
+  } | null>(null);
   const [locLoading, setLocLoading] = useState(false);
 
-  const { control, handleSubmit, formState: { errors }, watch } = useForm<FormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    watch,
+  } = useForm<FormValues>({
     defaultValues: { species: '', weightKg: '', grade: '' },
     mode: 'onTouched',
   });
@@ -87,15 +99,25 @@ export default function AddLotScreen() {
       try {
         const ok = await ensureLocationPermission();
         if (!ok) {
-          Alert.alert('Location needed', 'Please allow location to attach coordinates to the lot.');
+          Alert.alert(
+            'Location needed',
+            'Please allow location to attach coordinates to the lot.',
+          );
           setLocLoading(false);
           return;
         }
         const pos = await getCurrentPosition();
-        setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+        setGps({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        });
       } catch (e: any) {
         console.warn('GPS error', e?.message || e);
-        Alert.alert('Location error', 'Could not get GPS location. You can try again.');
+        Alert.alert(
+          'Location error',
+          'Could not get GPS location. You can try again.',
+        );
       } finally {
         setLocLoading(false);
       }
@@ -103,29 +125,32 @@ export default function AddLotScreen() {
   }, []);
 
   const pickPhoto = async () => {
-    const res: ImagePickerResponse = await launchCamera({ mediaType: 'photo', quality: 0.7, includeBase64: false });
+    const res: ImagePickerResponse = await launchCamera({
+      mediaType: 'photo',
+      quality: 0.7,
+      includeBase64: false,
+    });
     if (res.didCancel) return;
     const uri = res.assets?.[0]?.uri;
     if (uri) setPhotoUri(uri);
   };
 
   const chooseFromGallery = async () => {
-    const res: ImagePickerResponse = await launchImageLibrary({ mediaType: 'photo', quality: 0.8 });
+    const res: ImagePickerResponse = await launchImageLibrary({
+      mediaType: 'photo',
+      quality: 0.8,
+    });
     if (res.didCancel) return;
     const uri = res.assets?.[0]?.uri;
     if (uri) setPhotoUri(uri);
   };
 
   const onSubmit = (values: FormValues) => {
-    if (!gps) {
-      Alert.alert('Location required', 'Please capture location before saving.');
-      return;
-    }
+    if (!gps) { Alert.alert('Location required', 'Please capture location before saving.'); return; }
 
     const lotDraft = {
-      id: ulid(),
-      //tripId,
-     // lotNo,
+      lotNo,                               // ▶ human-friendly lot number
+      tripId,                              // ▶ link to trip
       species: values.species.trim(),
       grade: values.grade.trim(),
       weightKg: Number(values.weightKg),
@@ -135,22 +160,25 @@ export default function AddLotScreen() {
       _dirty: true,
     };
 
-    // TODO: dispatch your Redux action to save locally + outbox enqueue
-    // dispatch(createLotLocal(lotDraft));
+    dispatch(createLotLocal(lotDraft));    // ▶ save offline
 
-    //onPress: () => navigation.goBack()
-    Alert.alert('Saved', 'Lot saved offline and will sync when online.', [
-      { text: 'OK',  },
-    ]);
+    Alert.alert('Saved', `Lot ${lotNo} saved offline.`, [{ text: 'OK' }]);
   };
 
   const recaptureLocation = async () => {
     setLocLoading(true);
     try {
       const ok = await ensureLocationPermission();
-      if (!ok) { setLocLoading(false); return; }
+      if (!ok) {
+        setLocLoading(false);
+        return;
+      }
       const pos = await getCurrentPosition();
-      setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+      setGps({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+      });
     } catch (e: any) {
       Alert.alert('Location error', 'Could not refresh GPS location.');
     } finally {
@@ -165,15 +193,15 @@ export default function AddLotScreen() {
       {/* Read-only lot no and trip id */}
       <View style={styles.readonlyRow}>
         <Text style={styles.readonlyLabel}>Lot No</Text>
-        {/* <Text style={styles.readonlyValue}>{lotNo}</Text> */}
+        <Text style={styles.readonlyValue}>{lotNo}</Text>
       </View>
       <View style={styles.readonlyRow}>
         <Text style={styles.readonlyLabel}>Trip ID</Text>
-        {/* <Text style={styles.readonlyValue}>{tripId}</Text> */}
+        <Text style={styles.readonlyValue}>{tripId}</Text>
       </View>
 
       {/* Species */}
-      <View style={styles.field}> 
+      <View style={styles.field}>
         <Text style={styles.label}>Species</Text>
         <Controller
           name="species"
@@ -190,11 +218,13 @@ export default function AddLotScreen() {
             />
           )}
         />
-        {errors.species && <Text style={styles.errorText}>{errors.species.message}</Text>}
+        {errors.species && (
+          <Text style={styles.errorText}>{errors.species.message}</Text>
+        )}
       </View>
 
       {/* Weight */}
-      <View style={styles.field}> 
+      <View style={styles.field}>
         <Text style={styles.label}>Weight (kg)</Text>
         <Controller
           name="weightKg"
@@ -215,11 +245,13 @@ export default function AddLotScreen() {
         {!weightValid && weightValue?.length > 0 && (
           <Text style={styles.errorText}>Enter a number greater than 0</Text>
         )}
-        {errors.weightKg && <Text style={styles.errorText}>{errors.weightKg.message}</Text>}
+        {errors.weightKg && (
+          <Text style={styles.errorText}>{errors.weightKg.message}</Text>
+        )}
       </View>
 
-        {/* grade */}
-      <View style={styles.field}> 
+      {/* grade */}
+      <View style={styles.field}>
         <Text style={styles.label}>Grade</Text>
         <Controller
           name="grade"
@@ -236,19 +268,30 @@ export default function AddLotScreen() {
             />
           )}
         />
-        {errors.grade && <Text style={styles.errorText}>{errors.grade.message}</Text>}
+        {errors.grade && (
+          <Text style={styles.errorText}>{errors.grade.message}</Text>
+        )}
       </View>
 
       {/* GPS */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Location</Text>
         {gps ? (
-          <Text style={styles.cardText}>Lat {gps.lat.toFixed(5)}, Lng {gps.lng.toFixed(5)}{gps.accuracy ? ` (±${Math.round(gps.accuracy)}m)` : ''}</Text>
+          <Text style={styles.cardText}>
+            Lat {gps.lat.toFixed(5)}, Lng {gps.lng.toFixed(5)}
+            {gps.accuracy ? ` (±${Math.round(gps.accuracy)}m)` : ''}
+          </Text>
         ) : (
           <Text style={styles.cardText}>No location yet</Text>
         )}
-        <TouchableOpacity style={[styles.buttonSecondary, locLoading && styles.buttonDisabled]} onPress={recaptureLocation} disabled={locLoading}>
-          <Text style={styles.buttonSecondaryText}>{locLoading ? 'Getting location…' : 'Capture/Refresh Location'}</Text>
+        <TouchableOpacity
+          style={[styles.buttonSecondary, locLoading && styles.buttonDisabled]}
+          onPress={recaptureLocation}
+          disabled={locLoading}
+        >
+          <Text style={styles.buttonSecondaryText}>
+            {locLoading ? 'Getting location…' : 'Capture/Refresh Location'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -264,7 +307,10 @@ export default function AddLotScreen() {
           <TouchableOpacity style={styles.buttonSecondary} onPress={pickPhoto}>
             <Text style={styles.buttonSecondaryText}>Take Photo</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.buttonSecondary} onPress={chooseFromGallery}>
+          <TouchableOpacity
+            style={styles.buttonSecondary}
+            onPress={chooseFromGallery}
+          >
             <Text style={styles.buttonSecondaryText}>Choose from Gallery</Text>
           </TouchableOpacity>
         </View>
@@ -284,28 +330,73 @@ export default function AddLotScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  header: { fontSize: 22, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
+  header: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
 
-  readonlyRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
+  readonlyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
   readonlyLabel: { fontSize: 14, color: '#555' },
   readonlyValue: { fontSize: 14, fontWeight: '600' },
 
   field: { marginTop: 10 },
   label: { fontSize: 16, marginBottom: 6, color: '#222' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, paddingHorizontal: 12, height: 48, fontSize: 16 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 48,
+    fontSize: 16,
+  },
   inputError: { borderColor: '#d00' },
   errorText: { color: '#d00', marginTop: 6, fontSize: 12 },
 
-  card: { borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 12, marginTop: 14, backgroundColor: '#fafafa' },
+  card: {
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 14,
+    backgroundColor: '#fafafa',
+  },
   cardTitle: { fontSize: 16, fontWeight: '600', marginBottom: 6 },
   cardText: { fontSize: 14, color: '#333', marginBottom: 8 },
 
-  photo: { width: '100%', height: 180, borderRadius: 10, marginBottom: 10, backgroundColor: '#ddd' },
+  photo: {
+    width: '100%',
+    height: 180,
+    borderRadius: 10,
+    marginBottom: 10,
+    backgroundColor: '#ddd',
+  },
 
-  button: { backgroundColor: '#0A84FF', height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 18, marginBottom: 35 },
+  button: {
+    backgroundColor: '#0A84FF',
+    height: 52,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
+    marginBottom: 35,
+  },
   buttonText: { color: '#fff', fontSize: 17, fontWeight: '700' },
 
-  buttonSecondary: { backgroundColor: '#EAF3FF', paddingHorizontal: 14, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  buttonSecondary: {
+    backgroundColor: '#EAF3FF',
+    paddingHorizontal: 14,
+    height: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
   buttonSecondaryText: { color: '#0A84FF', fontSize: 14, fontWeight: '600' },
 
   buttonDisabled: { opacity: 0.6 },
