@@ -18,9 +18,6 @@ import {
   TextInputFocusEventData,
 } from 'react-native';
 
-// import { useNavigation } from '@react-navigation/native';
-// import { StackNavigationProp } from '@react-navigation/stack';
-
 import { useDispatch, useSelector } from 'react-redux';
 import type { Dispatch } from 'redux';
 import { login } from '../../redux/actions/authActions';
@@ -29,16 +26,8 @@ import { RootState } from '../../redux/store';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWindowDimensions } from 'react-native';
-// import { RootStackParamList } from '../../../types';
-
-// type loginScreenNavigationProp = StackNavigationProp<
-//   RootStackParamList,
-//   'Login'
-// >;
 
 const Login = () => {
-  // const navigation = useNavigation<loginScreenNavigationProp>();
-
   // Redux
   const dispatch = useDispatch<Dispatch<AuthAction>>();
   const { loading, error } = useSelector((s: RootState) => s.auth);
@@ -49,7 +38,9 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
-
+  // ⬇️ NEW: debug display
+  const [bearerToken, setBearerToken] = useState<string | null>(null);
+  const [rawResponse, setRawResponse] = useState<string | null>(null);
   // Keyboard-safe helpers
   const scrollRef = useRef<ScrollView>(null);
   const [emailY, setEmailY] = useState(0);
@@ -69,8 +60,6 @@ const Login = () => {
       // Delay ensures layout is measured after focus
       requestAnimationFrame(() => scrollTo(yGetter()));
     };
-  
-  
 
   const handleLogin = () => {
     let valid = true;
@@ -93,97 +82,130 @@ const Login = () => {
     if (!valid) return;
 
     // Dispatch classic Redux actions (no thunk)
-    dispatch<any>(login(email.trim(), password)); // RootNavigator will switch stack on success.
+    dispatch<any>(login(email.trim(), password))
+      .then(({ authUser, raw }: any) => {
+        setBearerToken(`Bearer ${authUser?.token ?? ''}`);
+        setRawResponse(JSON.stringify(raw, null, 2)); // pretty-print
+        Alert.alert(
+          'Login Success',
+          'Token and full response are shown below.',
+        );
+        console.log("authUser?.token",authUser?.token)
+        console.log("bearer token:",bearerToken)
+      })
+      .catch((e: any) => {
+        // already handled by reducer; optional toast
+        console.log('[Login] failed:', e?.message || e);
+      });
   };
 
-return (
-  <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 10 : 0}
-      style={{ flex: 1 }}
-    >
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom + 24 }]}
-        keyboardShouldPersistTaps="handled"
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 10 : 0}
+        style={{ flex: 1 }}
       >
-        <Image
-          source={require('../../assets/images/MFD.png')}
-          style={[styles.image, { width: imgSize, height: imgSize }]}
-          resizeMode="contain"
-        />
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={[
+            styles.scrollContainer,
+            { paddingBottom: insets.bottom + 24 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Image
+            source={require('../../assets/images/MFD.png')}
+            style={[styles.image, { width: imgSize, height: imgSize }]}
+            resizeMode="contain"
+          />
 
-        <View style={styles.formContainer}>
-          <View style={styles.loginHeader}>
-            <Text style={styles.loginText}>Enter Login Details</Text>
+          <View style={styles.formContainer}>
+            <View style={styles.loginHeader}>
+              <Text style={styles.loginText}>Enter Login Details</Text>
+            </View>
+
+            <View style={styles.loginBox}>
+              {/* Email */}
+              <View onLayout={e => setEmailY(e.nativeEvent.layout.y)}>
+                <TextInput
+                  placeholder="Email"
+                  value={email}
+                  onChangeText={t => {
+                    setEmail(t);
+                    if (emailError) setEmailError('');
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={styles.input}
+                  placeholderTextColor="#999999"
+                  returnKeyType="next"
+                  onFocus={onFocus(() => emailY)}
+                />
+                {emailError ? (
+                  <Text style={styles.errorText}>{emailError}</Text>
+                ) : null}
+              </View>
+
+              {/* Password */}
+              <View onLayout={e => setPasswordY(e.nativeEvent.layout.y)}>
+                <TextInput
+                  placeholder="Password"
+                  value={password}
+                  onChangeText={t => {
+                    setPassword(t);
+                    if (passwordError) setPasswordError('');
+                  }}
+                  secureTextEntry
+                  style={styles.input}
+                  placeholderTextColor="#999999"
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                  onFocus={onFocus(() => passwordY)}
+                />
+                {passwordError ? (
+                  <Text style={styles.errorText}>{passwordError}</Text>
+                ) : null}
+              </View>
+
+              {!!error && <Text style={styles.authError}>{error}</Text>}
+
+              {/* Keep me logged in / Forgot */}
+              <View style={styles.rememberRow}>
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() => setRememberMe(!rememberMe)}
+                >
+                  <View
+                    style={[styles.checkbox, rememberMe && styles.checkedBox]}
+                  >
+                    {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.rememberText}>Keep me logged in</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => Alert.alert('Forgot password pressed')}
+                >
+                  <Text style={styles.forgotPassword}>Forgot Password?</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Button */}
+              <View style={{ padding: 5 }}>
+                <Button
+                  title={loading ? 'Loading...' : 'LOGIN'}
+                  onPress={handleLogin}
+                  color="#1f720dff"
+                  disabled={loading}
+                />
+              </View>
+            </View>
           </View>
-
-          <View style={styles.loginBox}>
-            {/* Email */}
-            <View onLayout={e => setEmailY(e.nativeEvent.layout.y)}>
-              <TextInput
-                placeholder="Email"
-                value={email}
-                onChangeText={t => { setEmail(t); if (emailError) setEmailError(''); }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={styles.input}
-                placeholderTextColor="#999999"
-                returnKeyType="next"
-                onFocus={onFocus(() => emailY)}
-              />
-              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-            </View>
-
-            {/* Password */}
-            <View onLayout={e => setPasswordY(e.nativeEvent.layout.y)}>
-              <TextInput
-                placeholder="Password"
-                value={password}
-                onChangeText={t => { setPassword(t); if (passwordError) setPasswordError(''); }}
-                secureTextEntry
-                style={styles.input}
-                placeholderTextColor="#999999"
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
-                onFocus={onFocus(() => passwordY)}
-              />
-              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-            </View>
-
-            {!!error && <Text style={styles.authError}>{error}</Text>}
-
-            {/* Keep me logged in / Forgot */}
-            <View style={styles.rememberRow}>
-              <TouchableOpacity style={styles.checkboxContainer} onPress={() => setRememberMe(!rememberMe)}>
-                <View style={[styles.checkbox, rememberMe && styles.checkedBox]}>
-                  {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.rememberText}>Keep me logged in</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={() => Alert.alert('Forgot password pressed')}>
-                <Text style={styles.forgotPassword}>Forgot Password?</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Button */}
-            <View style={{ padding: 5 }}>
-              <Button
-                title={loading ? 'Loading...' : 'LOGIN'}
-                onPress={handleLogin}
-                color="#1f720dff"
-                disabled={loading}
-              />
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  </TouchableWithoutFeedback>
-);
-
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
+  );
 };
 
 const styles = StyleSheet.create({

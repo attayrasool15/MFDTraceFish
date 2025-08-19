@@ -1,8 +1,5 @@
-// src/redux/actions/lotActions.ts
 
-import { CREATE_LOT_LOCAL, Lot, LotAction } from "../types/tripTypes";
+import { CREATE_LOT_LOCAL, MARK_LOT_CLEAN, LotDraft, LotAction } from '../types/lotTypes';
 
-export const createLotLocal = (lot: Lot): LotAction => ({
-  type: CREATE_LOT_LOCAL,
-  payload: lot,
-});
+export const createLotLocal = (lot: LotDraft): LotAction => ({ type: CREATE_LOT_LOCAL, payload: lot });
+export const markLotClean = (lotId: string): LotAction => ({ type: MARK_LOT_CLEAN, payload: { lotId } });

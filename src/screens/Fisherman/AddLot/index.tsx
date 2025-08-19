@@ -47,19 +47,6 @@ export default function AddLotScreen() {
   const { gps, loading: locLoading, recapture } = useCurrentLocation();
   const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    if (!tripId) {
-      Alert.alert(
-        'Trip required',
-        'Please create or open a Trip first to attach this lot.',
-        [
-          { text: 'Go to Add Trip', onPress: () => navigation.replace('Trip') },
-          { text: 'Cancel', style: 'cancel', onPress: () => navigation.goBack() },
-        ]
-      );
-    }
-  }, [tripId, navigation]);
-
   const weightValue = methods.watch('weightKg');
   const weightValid = useMemo(() => {
     const n = Number(weightValue);
@@ -120,10 +107,7 @@ export default function AddLotScreen() {
               <Text style={s.chipLabel}>Lot No</Text>
               <Text style={s.chipValue} numberOfLines={1}>{lotNo}</Text>
             </View>
-            <View style={s.chip}>
-              <Text style={s.chipLabel}>Trip ID</Text>
-              <Text style={s.chipValue} numberOfLines={1}>{tripId ?? '—'}</Text>
-            </View>
+          
             <View style={[s.chip, gps ? s.chipOk : s.chipWarn]}>
               <Text style={s.chipLabel}>GPS</Text>
               <Text style={s.chipValue}>{gps ? 'Captured' : 'Pending'}</Text>
@@ -157,7 +141,7 @@ export default function AddLotScreen() {
 
             <ReadonlyRow label="Review" value={`Lot ${lotNo} will be linked to Trip ${tripId ?? '—'}`} />
 
-            <SaveBar label="Save Lot" disabled={!gps || !weightValid || !tripId} onPress={onSave} />
+            <SaveBar label="Save Lot" disabled={!gps || !weightValid } onPress={onSave} />
           </FormProvider>
         </ScrollView>
       </SafeAreaView>

@@ -50,17 +50,18 @@ export const login = (email: string, password: string) => {
 
       dispatch({ type: LOGIN_SUCCESS, payload: authUser });
 
-      // Return value so the UI can .then() if needed
-      return authUser;
+      // ⬇️ return BOTH the mapped user and the raw response (for UI display)
+      return { authUser, raw: json };
     } catch (e: any) {
       console.groupCollapsed('[AUTH] login failed');
       console.log('error:', e?.message || e);
       console.groupEnd();
       dispatch({ type: LOGIN_FAILURE, payload: e?.message || 'Login failed' });
-      throw e; // rethrow so the UI can catch if it wants
+      throw e;
     }
   };
 };
+
 
 export const loadSession = () => {
   return async (dispatch: Dispatch<AuthAction>) => {
