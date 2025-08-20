@@ -1,16 +1,25 @@
 /* eslint-disable react/no-unstable-nested-components */
 /* eslint-disable react-native/no-inline-styles */
-import React, { useCallback, useLayoutEffect } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   Text,
   Image,
-  ImageBackground,
   Alert,
   Pressable,
   SafeAreaView,
+  ActivityIndicator,
+  StatusBar,
+  ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../redux/actions/authActions';
@@ -18,8 +27,23 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FishermanStackParamList } from '../../app/navigation/stacks/FishermanStack';
 import type { RootState } from '../../redux/store';
+import {
+  getTripCounts,
+  listTrips,
+  type TripStatus,
+} from '../../services/trips';
 
 type Nav = NativeStackNavigationProp<FishermanStackParamList, 'FishermanHome'>;
+
+const PALETTE = {
+  green700: '#1B5E20',
+  green600: '#2E7D32',
+  green50: '#E8F5E9',
+  text900: '#111827',
+  text500: '#6B7280',
+  border: '#E5E7EB',
+  surface: '#FFFFFF',
+};
 
 const ActionCard = ({
   label,
@@ -33,15 +57,15 @@ const ActionCard = ({
   <Pressable
     onPress={onPress}
     style={({ pressed }) => [
-      styles.card,
+      styles.actionCard,
       pressed && { transform: [{ scale: 0.98 }], opacity: 0.9 },
     ]}
-    android_ripple={{ color: 'rgba(27,94,32,0.12)', borderless: false }}
+    android_ripple={{ color: 'rgba(0,0,0,0.06)', borderless: false }}
     accessibilityRole="button"
     accessibilityLabel={label}
   >
-    <Image source={iconSource} style={styles.icon} />
-    <Text style={styles.cardLabel}>{label}</Text>
+    <Image source={iconSource} style={styles.actionIcon} />
+    <Text style={styles.actionLabel}>{label}</Text>
   </Pressable>
 );
 
@@ -50,7 +74,21 @@ const FishermanHome = () => {
   const navigation = useNavigation<Nav>();
   const user = useSelector((s: RootState) => (s as any).auth?.user);
   const name = user?.name || 'Fisherman';
-  const role = user?.role || 'fisherman';
+  const role = user?.role || user?.user_type || 'fisherman';
+  const { width, height: screenHeight } = useWindowDimensions();
+  const isCompact = width < 360; // small phones
+  const isTablet = width >= 768; // big screens
+
+  const localTrips = useSelector(
+    (s: RootState) => (s as any).trips?.items ?? [],
+  );
+
+  const [counts, setCounts] = useState<{ [K in TripStatus]?: number }>({});
+  const [statusHints, setStatusHints] = useState<{
+    [K in TripStatus]?: string;
+  }>({});
+  const [loadingCounts, setLoadingCounts] = useState(false);
+  const [errorCounts, setErrorCounts] = useState<string | null>(null);
 
   const handleLogout = useCallback(() => {
     Alert.alert('Logout', 'Are you sure you want to log out?', [
@@ -65,220 +103,367 @@ const FishermanHome = () => {
 
   useLayoutEffect(() => {
     navigation.setOptions?.({
+      title: 'Fisherman',
+      headerStyle: { backgroundColor: PALETTE.green700 },
+      headerTintColor: '#FFFFFF',
+      headerTitleStyle: { color: '#FFFFFF', fontWeight: '800' },
+      headerShadowVisible: false,
       headerRight: () => (
         <TouchableOpacity
           onPress={handleLogout}
-          style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+          style={styles.headerLogoutBtn}
           accessibilityRole="button"
           accessibilityLabel="Logout"
         >
-          <Text style={{ color: '#1B5E20', fontWeight: '700' }}>Logout</Text>
+          <Text style={styles.headerLogoutText}>⎋ Logout</Text>
         </TouchableOpacity>
       ),
-      title: 'Fisherman',
     });
   }, [navigation, handleLogout]);
 
+  const fetchCounts = useCallback(async () => {
+    setLoadingCounts(true);
+    // Local-only counts (no API)
+    const localCountFor = (st: TripStatus) =>
+      (localTrips || []).filter(
+        (t: any) => String(t.status || 'pending').toLowerCase() === st,
+      ).length;
+
+    setCounts({
+      pending: localCountFor('pending'),
+      approved: localCountFor('approved'),
+      active: localCountFor('active'),
+      completed: localCountFor('completed'),
+      cancelled: 0,
+      all: (localTrips || []).length,
+    } as any);
+
+    setStatusHints({
+      pending: 'offline',
+      approved: 'offline',
+      active: 'offline',
+      completed: 'offline',
+    } as any);
+
+    setLoadingCounts(false);
+  }, [localTrips]);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
+  const roleLabel = useMemo(() => String(role).replace('_', ' '), [role]);
+
+  const goToOfflinePending = () => {
+    // @ts-ignore ensure 'OfflineTrips' exists in FishermanStack
+    navigation.navigate('OfflineTrips');
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#E8F5E9' }}>
-      <View style={styles.container}>
-        <ImageBackground
-          source={require('../../assets/images/fishermanImage.png')}
-          style={styles.hero}
-          resizeMode="cover"
-          imageStyle={{ opacity: 0.7 }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: PALETTE.surface }}>
+      {/* Green status bar to match header */}
+      <StatusBar backgroundColor={PALETTE.green700} barStyle="light-content" />
+
+      <View style={styles.screen}>
+        {/* Welcome / Profile strip */}
+        <View
+          style={[styles.headerCard, isCompact && styles.headerCardCompact]}
         >
-          {/* Gradient-ish overlay using multiple semi-transparent layers (no extra deps) */}
-          <View style={styles.overlay} />
-          <View style={styles.overlaySoft} />
-
-          <View style={styles.topBar}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{role.replace('_', ' ')}</Text>
-            </View>
-
-            <Pressable
-              onPress={handleLogout}
-              style={({ pressed }) => [
-                styles.logoutPill,
-                pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
-              ]}
-              android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-              accessibilityRole="button"
-              accessibilityLabel="Logout"
-            >
-              <Text style={styles.logoutText}>⎋ Logout</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.heroTextWrap}>
-            <Text style={styles.eyebrow}>Welcome</Text>
-            <Text style={styles.title}>{name}</Text>
-            <Text style={styles.subTitle}>
-              Let’s record your activity today.
-            </Text>
-          </View>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.profileButton,
-              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-            ]}
-            android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
-            accessibilityRole="button"
-            accessibilityLabel="Open Profile"
+          <View
+            style={[styles.headerLeft, isCompact && styles.headerLeftCompact]}
           >
             <Image
               source={require('../../assets/images/placeholderIMG.png')}
-              style={styles.profileImage}
+              style={[
+                styles.avatar,
+                isCompact && styles.avatarSm,
+                isTablet && styles.avatarLg,
+              ]}
             />
-            <View>
-              <Text style={styles.profileText}>Profile</Text>
-              <Text style={styles.profileSub}>{user?.email ?? '—'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.eyebrow, isCompact && { fontSize: 11 }]}>
+                Welcome
+              </Text>
+              <Text
+                style={[
+                  styles.title,
+                  isCompact && styles.titleSm,
+                  isTablet && styles.titleLg,
+                ]}
+              >
+                {name}
+              </Text>
+              <View
+                style={[styles.rolePill, isCompact && styles.rolePillTight]}
+              >
+                <Text style={[styles.roleText, isCompact && { fontSize: 11 }]}>
+                  {roleLabel}
+                </Text>
+              </View>
             </View>
-          </Pressable>
-        </ImageBackground>
+          </View>
 
-        <View style={styles.grid}>
-          <ActionCard
-            label="+ New Trips"
-            iconSource={require('../../assets/images/boatIcon.png')}
-            onPress={() => navigation.navigate('Trip')}
-          />
-          <ActionCard
-            label="Lots"
-            iconSource={require('../../assets/images/fishIcon.png')}
-            onPress={() => navigation.navigate('Lots')}
-          />
+          {/* Right actions: Refresh + Logout */}
+          <View
+            style={[styles.headerRight, isCompact && styles.headerRightStack]}
+          >
+            <Pressable
+              onPress={fetchCounts}
+              style={({ pressed }) => [
+                styles.refreshBtn,
+                isCompact && styles.headerBtnSm,
+                pressed && { opacity: 0.85 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Refresh dashboard"
+            >
+              <Text style={[styles.refreshText, isCompact && { fontSize: 12 }]}>
+                ↻ Refresh
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+        
+        {/* Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+
+          {/* One full-width button per row, scrollable */}
+          <ScrollView
+            style={[
+              styles.actionsScroll,
+              { maxHeight: Math.min(screenHeight * 0.5, 420) }, // ⬅️ dynamic cap
+            ]}
+            contentContainerStyle={styles.actionsList}
+            showsVerticalScrollIndicator
+          >
+            <ActionCard
+              label="All Trips"
+              iconSource={require('../../assets/images/fishIcon.png')}
+              onPress={() => navigation.navigate('AllTrip')}
+            />
+            <ActionCard
+              label="Pending offline Trips"
+              iconSource={require('../../assets/images/fishIcon.png')}
+              onPress={goToOfflinePending}
+            />
+            <ActionCard
+              label="+ New Trips"
+              iconSource={require('../../assets/images/boatIcon.png')}
+              onPress={() => navigation.navigate('Trip')}
+            />
+            <ActionCard
+              label="+ Create Lots"
+              iconSource={require('../../assets/images/fishIcon.png')}
+              onPress={() => navigation.navigate('Lots')}
+            />
+            <ActionCard
+              label="All Lots"
+              iconSource={require('../../assets/images/fishIcon.png')}
+              onPress={() => navigation.navigate('LotsList')}
+            />
+            {/* Add more actions—list will scroll */}
+          </ScrollView>
+          <Pressable
+              onPress={handleLogout}
+              style={({ pressed }) => [
+                styles.logoutBtn,
+                isCompact && styles.headerBtnSm,
+                pressed && { opacity: 0.9 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Logout"
+            >
+              <Text style={[styles.logoutText, isCompact && { fontSize: 12 }]}>
+                ⎋ Logout
+              </Text>
+            </Pressable>
         </View>
       </View>
     </SafeAreaView>
   );
 };
 
-const CARD_BG = 'rgba(255,255,255,0.9)';
-const BORDER = 'rgba(255,255,255,0.65)';
-
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  hero: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 24,
-    justifyContent: 'flex-end',
-    minHeight: "70%",
+  screen: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 38,
+    paddingBottom: 12,
+    backgroundColor: PALETTE.surface,
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(27,94,32,0.25)',
-  },
-  overlaySoft: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.12)',
-  },
-  topBar: {
-    position: 'absolute',
-    top: 50,
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  badge: {
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  badgeText: {
-    color: '#1B5E20',
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-  logoutPill: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  logoutText: { color: '#1B5E20', fontWeight: '700' },
 
-  heroTextWrap: {
-    marginBottom: 16,
+  // Stats
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  statCard: {
+    flexBasis: '48%',
+    backgroundColor: PALETTE.surface,
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
+  statDot: { width: 8, height: 8, borderRadius: 4, marginBottom: 6 },
+  statLabel: { fontSize: 12, color: PALETTE.text500 },
+  statValue: { fontSize: 22, fontWeight: '800', marginTop: 2 },
+  statHint: { marginTop: 4, fontSize: 11, color: '#9CA3AF' },
+  errorText: { marginTop: 8, color: '#C62828' },
+
+  // Actions
+  actionsRow: { flexDirection: 'row', gap: 12 },
+
+  // Header logout button
+  headerLogoutBtn: {
+    backgroundColor: 'red',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  headerLogoutText: { color: '#FFFFFF', fontWeight: '800' },
+  section: { marginTop: 26, borderRadius: 20 },
+  sectionTitle: {
+    fontSize: 18,
+
+    fontWeight: '800',
+    color: PALETTE.green700,
+    marginLeft: 5,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+
+  /** NEW: scroll container for actions */
+  actionsScroll: {
+    // no fixed height here; height is set dynamically inline via maxHeight
+  },
+
+  /** vertical stack for actions */
+  actionsList: {
+    gap: 12, // spacing between rows
+  },
+
+  /** full-width action card */
+  actionCard: {
+    alignSelf: 'stretch',
+    backgroundColor: PALETTE.surface,
+    borderRadius: 16,
+    paddingHorizontal: 22,
+    marginHorizontal: 10,
+    paddingVertical: 22,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
+  actionIcon: { width: 40, height: 40, marginBottom: 8, resizeMode: 'contain' },
+  actionLabel: {
+    fontSize: 16,
+    color: PALETTE.green700,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+
+  headerCard: {
+    backgroundColor: PALETTE.green700,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  /** compact: stack vertically */
+  headerCardCompact: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+  },
+
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  headerLeftCompact: { alignItems: 'flex-start' },
+
+  avatar: { height: 56, width: 56, borderRadius: 28 },
+  avatarSm: { height: 44, width: 44, borderRadius: 22 },
+  avatarLg: { height: 64, width: 64, borderRadius: 32 },
+
   eyebrow: {
-    color: '#E8F5E9',
-    opacity: 0.9,
-    fontSize: 13,
-    letterSpacing: 1,
+    color: 'white',
+    fontSize: 12,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   title: {
-    color: '#FFFFFF',
+    color: PALETTE.surface,
     fontWeight: '800',
-    fontSize: 28,
+    fontSize: 22,
     marginTop: 2,
   },
-  subTitle: {
-    color: '#FFFFFF',
-    opacity: 0.9,
-    marginTop: 4,
-    fontSize: 14,
-  },
+  titleSm: { fontSize: 18, marginTop: 0 },
+  titleLg: { fontSize: 24 },
 
-  profileButton: {
-    marginTop: 10,
+  rolePill: {
     alignSelf: 'flex-start',
-    flexDirection: 'row',
-    gap: 10,
-    backgroundColor: CARD_BG,
-    borderRadius: 18,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: BORDER,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    borderColor: PALETTE.border,
+    backgroundColor: PALETTE.green50,
   },
-  profileImage: { height: 44, width: 44, borderRadius: 22 },
-  profileText: {
-    fontSize: 16,
-    color: '#1B5E20',
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  profileSub: { fontSize: 12, color: '#2E7D32', opacity: 0.9, marginTop: 2 },
+  rolePillTight: { marginTop: 4, paddingHorizontal: 8, paddingVertical: 3 },
+  roleText: { color: PALETTE.green700, fontWeight: '700', fontSize: 12 },
 
-  grid: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    gap: 14,
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  /** compact: push actions under profile, spread full width */
+  headerRightStack: {
+    marginTop: 6,
+    alignSelf: 'stretch',
+    justifyContent: 'flex-end',
   },
-  card: {
-    flex: 1,
-    backgroundColor: CARD_BG,
-    borderRadius: 16,
-    paddingVertical: 24,
-    alignItems: 'center',
+
+  refreshBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: BORDER,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    borderColor: PALETTE.border,
+    backgroundColor: '#F3F4F6',
   },
-  icon: { width: 42, height: 42, marginBottom: 10, resizeMode: 'contain' },
-  cardLabel: { fontSize: 16, color: '#1B5E20', fontWeight: '800' },
+  refreshText: { color: PALETTE.green700, fontWeight: '700' },
+
+  logoutBtn: {
+    marginTop:15,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    backgroundColor: '#FEE2E2',
+  },
+  logoutText: { color: '#B91C1C', fontWeight: '800', textAlign:'center' },
+
+  /** compact button padding */
+  headerBtnSm: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
 });
 
 export default FishermanHome;

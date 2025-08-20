@@ -1,7 +1,7 @@
 // src/services/http.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'https://smartaisoft.com/MFD-Trace-Fish/api';
+const BASE_URL = 'https://smartaisoft.com/MFD-Trace-Fish/api'; // ← updated base
 const DEBUG = __DEV__; // only log in dev builds
 
 let authToken: string | null = null;
@@ -55,7 +55,6 @@ export async function api(path: string, opts: ReqOpts = {}) {
   };
 
   if (DEBUG) {
-    // avoid logging full tokens
     const tokenPreview = authToken ? `${authToken.slice(0, 8)}…${authToken.slice(-4)}` : null;
     console.groupCollapsed(`[HTTP] ${method} ${url}`);
     console.log('headers:', { ...headers, Authorization: tokenPreview ? `Bearer ${tokenPreview}` : undefined });
@@ -76,7 +75,7 @@ export async function api(path: string, opts: ReqOpts = {}) {
   if (DEBUG) {
     console.groupCollapsed(`[HTTP] ${method} ${url} ← ${res.status}`);
     console.log('content-type:', contentType);
-    console.log('raw:', text.slice(0, 400)); // preview
+    console.log('raw:', text.slice(0, 400));
     console.groupEnd();
   }
 
@@ -87,15 +86,16 @@ export async function api(path: string, opts: ReqOpts = {}) {
 
   if (!res.ok) {
     const msg = json?.message || (text ? text.slice(0, 200) : `HTTP ${res.status}`);
-    throw new Error(msg);
+    const err: any = new Error(msg);
+    err.status = res.status;
+    err.response = json ?? text;
+    throw err;
   }
 
   if (!json) throw new Error('Invalid server response (expected JSON).');
 
   if (json.success === false) {
-    const msg =
-      json.message ||
-      (json.errors ? Object.values(json.errors).flat()?.join('\n') : 'Request failed');
+    const msg = json.message || (json.errors ? Object.values(json.errors).flat()?.join('\n') : 'Request failed');
     throw new Error(msg);
   }
 

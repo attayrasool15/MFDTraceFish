@@ -3,6 +3,7 @@ import { Dispatch } from 'redux';
 import { createTripLocal } from './tripActions'; // your local reducer action
 import type { Trip } from '../types/tripTypes';
 import { api } from '../../services/https';
+import { CreateTripBody } from '../../services/trips';
 
 export const getTrips = (page = 1, perPage = 15, status?: string, search?: string) => {
   return async () => {
@@ -22,8 +23,8 @@ export const createTrip = (localTrip: Trip) => {
       const body = {
         trip_name: localTrip.tripId,                       // human-friendly name from your ID
         boat_id: 1,                                        // TODO: map from boatNameId (need a boat lookup)
-        departure_port: localTrip.port,
-        destination_port: localTrip.port,                  // TODO: add destination to form
+        departure_port: localTrip.departure_port,
+        destination_port: localTrip.destination_port,                  // TODO: add destination to form
         departure_date: localTrip.departureAt.slice(0, 10),
         expected_return_date: null,                        // TODO: add to form
         crew_size: localTrip.numCrew,
@@ -54,5 +55,12 @@ export const updateTripLocation = (tripServerId: number, lat: number, lng: numbe
         current_location: name || 'Current position',
       },
     });
+  };
+};
+
+
+export const createTripServerOnly = (body: CreateTripBody) => {
+  return async (_dispatch: Dispatch) => {
+    await api('/trips', { method: 'POST', body });
   };
 };
