@@ -1,27 +1,36 @@
-// src/redux/types/tripTypes.ts
+// add at bottom or export with your existing types
+export const MARK_TRIP_CLEAN = 'MARK_TRIP_CLEAN' as const;
+
 export type Trip = {
   tripId: string;
-  captainName: string;
-  boatNameId: string;
-  tripPurpose: string;
-  port: string;
-  seaType: string;
-  numCrew: number;
-  numLifejackets: number;
-  emergencyContact: string;
-  seaConditions: string;
-  targetSpecies: string;
-  tripCost: number;
-  gps: { lat: number; lng: number; accuracy?: number } | null;
-  departureAt: string; // ISO
+  captainName?: string;
+  boatNameId?: string;
+  departure_port?: string;
+  destination_port?: string;
+  seaType?: string;
+  numCrew?: number;
+  numLifejackets?: number;
+  emergencyContact?: string;
+  seaConditions?: string;
+  targetSpecies?: string;
+  tripPurpose?: string;
+  tripCost?: number;
+  fuelCost?: number;
+  estimatedCatch?: number;
+  equipmentCost?: number;
+  gps?: { lat: number; lng: number; accuracy?: number };
+  departureAt?: string;
   arrivalAt?: string | null;
-  _dirty: boolean;     // pending sync
+  status?: string;
+  _dirty?: boolean;         // ← important
+  createdAt?: string;       // for sorting locally
 };
 
 export const CREATE_TRIP_LOCAL = 'CREATE_TRIP_LOCAL' as const;
 
 export type TripAction =
-  | { type: typeof CREATE_TRIP_LOCAL; payload: Trip };
+  | { type: typeof CREATE_TRIP_LOCAL; payload: Trip }
+  | { type: typeof MARK_TRIP_CLEAN; payload: { tripId: string } };
 
 // src/redux/types/lotTypes.ts
 export type Lot = {

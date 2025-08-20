@@ -14,12 +14,25 @@ type Props = {
   rules?: any;
 };
 
-export default function TextField({ name, label, placeholder, keyboardType, secureTextEntry, rules }: Props) {
+export default function TextField({
+  name,
+  label,
+  placeholder,
+  keyboardType,
+  secureTextEntry,
+  rules,
+}: Props) {
   const { control, formState: { errors } } = useFormContext<FormValues>();
   const hasErr = !!errors[name];
+  const isRequired = !!(rules && typeof rules.required !== 'undefined');
+
   return (
     <View style={s.field}>
-      <Text style={s.label}>{label}</Text>
+      <Text style={s.label}>
+        {label}
+        {isRequired && <Text style={{ color: '#EF4444' }}> *</Text>}
+      </Text>
+
       <Controller
         name={name as any}
         control={control}
@@ -37,6 +50,7 @@ export default function TextField({ name, label, placeholder, keyboardType, secu
           />
         )}
       />
+
       {hasErr && <Text style={s.errorText}>{(errors as any)[name]?.message as string}</Text>}
     </View>
   );

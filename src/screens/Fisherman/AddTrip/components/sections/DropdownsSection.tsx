@@ -6,9 +6,29 @@ import { PORTS, SEA_CONDITIONS, SEA_TYPES } from '../../constants';
 export default function DropdownsSection() {
   return (
     <>
-      <DropdownField name="port" label="Port" options={PORTS} />
-      <DropdownField name="seaType" label="Type of Sea Going" options={SEA_TYPES} />
-      <DropdownField name="seaConditions" label="Sea Conditions" options={SEA_CONDITIONS} />
+      <DropdownField
+        name="departure_port"
+        label="Port Location"
+        options={PORTS}
+        rules={{ required: 'port location is required' }}
+      />
+      <DropdownField
+        name="destination_port"
+        label="Departure Location"
+        options={PORTS}
+        rules={{ required: 'departure location is required' }}
+      />
+      
+      <DropdownField
+        name="seaType"
+        label="Type of Sea Going"
+        options={SEA_TYPES}
+      />
+      <DropdownField
+        name="seaConditions"
+        label="Sea Conditions"
+        options={SEA_CONDITIONS}
+      />
     </>
   );
 }

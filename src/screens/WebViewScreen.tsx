@@ -6,7 +6,7 @@ const WebViewScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <WebView
-        source={{ uri: 'https://192.168.18.44:8000/login' }}
+        source={{ uri: 'https://smartaisoft.com/MFD-Trace-Fish/login' }}
         style={{ flex: 1 }}
         javaScriptEnabled={true}
         domStorageEnabled={true}
