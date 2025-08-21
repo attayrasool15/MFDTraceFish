@@ -84,7 +84,7 @@ export default function AddLotScreen() {
   const loadTrips = useCallback(async () => {
     setLoadingTrips(true);
     try {
-      const res = await api('https://smartaisoft.com/MFD-Trace-Fish/api/trips', {
+      const res = await api('http://192.168.18.44:8000/api/trips', {
         query: { page: 1, per_page: 100 },
       });
       const rows: TripRow[] = (res?.data?.data ?? []).map((t: any) => ({
