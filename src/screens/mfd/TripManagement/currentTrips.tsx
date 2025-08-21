@@ -17,10 +17,12 @@ export default function CurrentTrip() {
         </Text>
         <Text>Details about the current trip will be displayed here.</Text>
       </View>
-      <View>
+      <View style={styles.Heading}>
         <Text style={{ fontSize: 22 }}>TRIP-20250819-004</Text>
         <View>
-            
+            <TouchableOpacity></TouchableOpacity>
+            <TouchableOpacity></TouchableOpacity>
+            <TouchableOpacity></TouchableOpacity>
         </View>
       </View>
     </ScrollView>

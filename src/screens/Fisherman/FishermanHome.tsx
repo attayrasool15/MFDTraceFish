@@ -66,6 +66,7 @@ const FishermanHome = () => {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Yes, Logout', style: 'destructive', onPress: () => dispatch<any>(logout()) },
     ]);
+
   }, [dispatch]);
 
   const navAllTrips = useCallback(() => navigation.navigate('AllTrip'), [navigation]);
@@ -136,7 +137,7 @@ const FishermanHome = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <ScrollView
-            style={{ maxHeight: Math.min(screenHeight * 0.93, 520) }}
+            style={{ maxHeight: Math.min(screenHeight * 0.93, 610) }}
             contentContainerStyle={styles.actionsList}
             showsVerticalScrollIndicator
           >
