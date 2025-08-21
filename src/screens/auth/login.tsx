@@ -87,15 +87,15 @@ const Login = () => {
       .then(({ authUser, raw }: any) => {
         setBearerToken(`Bearer ${authUser?.token ?? ''}`);
         setRawResponse(JSON.stringify(raw, null, 2)); // pretty-print
-            Toast.show({
-              type:'success',
-              text1:'Login Success',
-              text2:'Token and full response are shown below.',
-              visibilityTime: 10000,
-              position:'bottom',
-            });
-        console.log("authUser?.token",authUser?.token)
-        console.log("bearer token:",bearerToken)
+        Toast.show({
+          type: 'success',
+          text1: 'Login Success',
+          text2: 'Token and full response are shown below.',
+          visibilityTime: 10000,
+          position: 'bottom',
+        });
+        console.log('authUser?.token', authUser?.token);
+        console.log('bearer token:', bearerToken);
       })
       .catch((e: any) => {
         // already handled by reducer; optional toast
@@ -189,7 +189,14 @@ const Login = () => {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => Alert.alert('Forgot password pressed')}
+                  onPress={() =>
+                    Toast.show({
+                      type: 'info',
+                      text1: 'Forgot Password',
+                      text2: 'Please contact support to reset your password.',
+                      position: 'bottom'
+                    })
+                  }
                 >
                   <Text style={styles.forgotPassword}>Forgot Password?</Text>
                 </TouchableOpacity>
