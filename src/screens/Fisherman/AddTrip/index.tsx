@@ -39,6 +39,7 @@ import {
 import type { RouteProp } from '@react-navigation/native';
 import { isOnline } from '../../../offline/net';
 import { enqueueTrip, processQueue } from '../../../offline/TripQueues';
+import Toast from 'react-native-toast-message';
 
 const HEADER_BG = '#1f720d';
 type TripRoute = RouteProp<FishermanStackParamList, 'Trip'>;
@@ -153,105 +154,6 @@ export default function AddTripScreen() {
   }, [editingId]);
 
   // ---- submit handlers ----
-  const onSaveCreate = methods.handleSubmit(async values => {
-    if (!gps) {
-      Alert.alert(
-        'Location required',
-        'Please capture location before saving.',
-      );
-      return;
-    }
-    try {
-      const departureDisplay =
-        values.departure_time?.trim() || formatYmd12h(new Date());
-      const dt = parseYmd12h(departureDisplay);
-      const departure_date = formatYmd(dt);
-
-      const fishermanId =
-        values.fisherman !== '' && values.fisherman != null
-          ? Number(values.fisherman)
-          : undefined;
-
-      const tripTypeRaw = values.tripType?.trim() || 'Fishing Trip';
-      const trip_type = TRIP_TYPE_MAP[tripTypeRaw] ?? 'fishing';
-
-      const port_location =
-        values.destination_port?.trim() ||
-        values.departure_port?.trim() ||
-        undefined;
-
-      const body = {
-        trip_name: tripId,
-        fisherman_id: fishermanId,
-        trip_type,
-        port_location,
-        crew_count: Number(values.crewCount || 0), // your backend accepted crew_count for create
-
-        departure_port: values.departure_port || undefined,
-        destination_port: values.destination_port || undefined,
-        departure_date,
-        departure_time: departureDisplay,
-        departure_latitude: gps?.lat,
-        departure_longitude: gps?.lng,
-
-        fishing_method: tripTypeRaw,
-        target_species: values.targetSpecies?.trim() || undefined,
-        boat_registration_number: values.boatNameId?.trim() || undefined,
-
-        sea_type: values.seaType || undefined,
-        sea_conditions: values.seaConditions || undefined,
-        emergency_contact: values.emergencyContact?.trim() || undefined,
-
-        trip_cost: values.tripCost !== '' ? Number(values.tripCost) : undefined,
-        fuel_cost: values.fuelCost !== '' ? Number(values.fuelCost) : undefined,
-        estimated_catch:
-          values.estimatedCatch !== ''
-            ? Number(values.estimatedCatch)
-            : undefined,
-        equipment_cost:
-          values.equipmentCost !== ''
-            ? Number(values.equipmentCost)
-            : undefined,
-        notes: values.tripPurpose?.trim() || undefined,
-      } as const;
-
-      const online = await isOnline();
-
-      if (!online) {
-        await enqueueTrip(body as any);
-        Alert.alert(
-          'Saved Offline',
-          'No internet. Trip added to upload queue and will auto-submit when online.',
-        );
-        // Optionally go back to home
-        navigation.navigate('FishermanHome');
-        return;
-      }
-
-      try {
-        // Try live submit first
-        await createTrip(body as any);
-        Alert.alert('Trip created', `Trip ${tripId} was saved successfully.`, [
-          { text: 'OK', onPress: () => navigation.navigate('FishermanHome') },
-        ]);
-      } catch (err: any) {
-        // Network/server temporary issues → fallback to queue
-        await enqueueTrip(body as any);
-        Alert.alert(
-          'Saved Offline',
-          'Temporary issue submitting. Trip moved to upload queue and will auto-submit when online.',
-        );
-        navigation.navigate('FishermanHome');
-        // Kick the processor (in case we’re still online and it was a transient error)
-        processQueue();
-      }
-    } catch (err: any) {
-      Alert.alert(
-        'Save failed',
-        err?.message || 'Failed to prepare trip payload.',
-      );
-    }
-  });
 
   // Build a small patch with only dirty changes:
   const buildPatch = (values: FormValues) => {
@@ -337,6 +239,111 @@ export default function AddTripScreen() {
     return patch;
   };
 
+  const onSaveCreate = methods.handleSubmit(async values => {
+    if (!gps) {
+      Alert.alert(
+        'Location required',
+        'Please capture location before saving.',
+      );
+      return;
+    }
+    try {
+      const departureDisplay =
+        values.departure_time?.trim() || formatYmd12h(new Date());
+      const dt = parseYmd12h(departureDisplay);
+      const departure_date = formatYmd(dt);
+
+      const fishermanId =
+        values.fisherman !== '' && values.fisherman != null
+          ? Number(values.fisherman)
+          : undefined;
+
+      const tripTypeRaw = values.tripType?.trim() || 'Fishing Trip';
+      const trip_type = TRIP_TYPE_MAP[tripTypeRaw] ?? 'fishing';
+
+      const port_location =
+        values.destination_port?.trim() ||
+        values.departure_port?.trim() ||
+        undefined;
+
+      const body = {
+        trip_name: tripId,
+        fisherman_id: fishermanId,
+        trip_type,
+        port_location,
+        crew_count: Number(values.crewCount || 0), // your backend accepted crew_count for create
+
+        departure_port: values.departure_port || undefined,
+        destination_port: values.destination_port || undefined,
+        departure_date,
+        departure_time: departureDisplay,
+        departure_latitude: gps?.lat,
+        departure_longitude: gps?.lng,
+
+        fishing_method: tripTypeRaw,
+        target_species: values.targetSpecies?.trim() || undefined,
+        boat_registration_number: values.boatNameId?.trim() || undefined,
+
+        sea_type: values.seaType || undefined,
+        sea_conditions: values.seaConditions || undefined,
+        emergency_contact: values.emergencyContact?.trim() || undefined,
+
+        trip_cost: values.tripCost !== '' ? Number(values.tripCost) : undefined,
+        fuel_cost: values.fuelCost !== '' ? Number(values.fuelCost) : undefined,
+        estimated_catch:
+          values.estimatedCatch !== ''
+            ? Number(values.estimatedCatch)
+            : undefined,
+        equipment_cost:
+          values.equipmentCost !== ''
+            ? Number(values.equipmentCost)
+            : undefined,
+        notes: values.tripPurpose?.trim() || undefined,
+      } as const;
+
+      const online = await isOnline();
+
+      if (!online) {
+        await enqueueTrip(body as any);
+        Alert.alert(
+          'Saved Offline',
+          'No internet. Trip added to upload queue and will auto-submit when online.',
+        );
+        // Optionally go back to home
+        navigation.navigate('FishermanHome');
+        return;
+      }
+
+      try {
+        // Try live submit first
+        await createTrip(body as any);
+        Toast.show({
+          type: 'success',
+          text1: 'Trip created',
+          text2: `Trip ${tripId} was saved successfully.`,
+          position: 'top',
+        });
+        // small delay is optional to let the toast appear before navigation
+        setTimeout(() => navigation.navigate('FishermanHome'), 200);
+      } catch (err: any) {
+        // Network/server temporary issues → fallback to queue
+        await enqueueTrip(body as any);
+        Alert.alert(
+          'Saved Offline',
+          'Temporary issue submitting. Trip moved to upload queue and will auto-submit when online.',
+        );
+        navigation.navigate('FishermanHome');
+        // Kick the processor (in case we’re still online and it was a transient error)
+        processQueue();
+      }
+    } catch (err: any) {
+      Alert.alert(
+        'Save failed',
+        err?.message || 'Failed to prepare trip payload.',
+      );
+    }
+  });
+
   const onSaveEdit = methods.handleSubmit(async values => {
     if (!isEdit || !editingId) return;
 
@@ -419,8 +426,8 @@ export default function AddTripScreen() {
                     ? 'Captured'
                     : 'Optional'
                   : gps
-                  ? 'Captured'
-                  : 'Pending'}
+                  ? 'Enabled/Active'
+                  : 'capturing'}
               </Text>
             </View>
           </View>

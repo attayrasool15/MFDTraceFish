@@ -11,7 +11,6 @@ import {
   TextInput,
   Button,
   Image,
-  Alert,
   Keyboard,
   TouchableWithoutFeedback,
   NativeSyntheticEvent,
@@ -26,6 +25,7 @@ import { RootState } from '../../redux/store';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWindowDimensions } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 const Login = () => {
   // Redux
@@ -86,12 +86,14 @@ const Login = () => {
       .then(({ authUser, raw }: any) => {
         setBearerToken(`Bearer ${authUser?.token ?? ''}`);
         setRawResponse(JSON.stringify(raw, null, 2)); // pretty-print
-        Alert.alert(
-          'Login Success',
-          'Token and full response are shown below.',
-        );
-        console.log("authUser?.token",authUser?.token)
-        console.log("bearer token:",bearerToken)
+        Toast.show({
+          type: 'success',
+          text1: 'Login Success',
+          visibilityTime: 10000,
+          position: 'bottom',
+        });
+        console.log('authUser?.token', authUser?.token);
+        console.log('bearer token:', bearerToken);
       })
       .catch((e: any) => {
         // already handled by reducer; optional toast
@@ -185,7 +187,14 @@ const Login = () => {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => Alert.alert('Forgot password pressed')}
+                  onPress={() =>
+                    Toast.show({
+                      type: 'info',
+                      text1: 'Forgot Password',
+                      text2: 'Please contact support to reset your password.',
+                      position: 'bottom'
+                    })
+                  }
                 >
                   <Text style={styles.forgotPassword}>Forgot Password?</Text>
                 </TouchableOpacity>
